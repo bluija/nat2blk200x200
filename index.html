@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI-assisted decision-making</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.18.1/lodash.min.js"
+            integrity="sha256-qNfmKRrYAlb5dqzpCCSnEBjS9waZLJEHsgvc7Ze+4ns=" crossorigin="anonymous"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+    <script defer src="firebaseconfig.js"></script>
+
+    <script type="module" src="firebasepsych.js"></script>
+    <script type="module" src="script.js"></script>
+</head>
+<body>
+<div class="consent container-fluid p-5 ">
+    <div class="text-center">
+        <h1>Consent</h1>
+        <h3>AI-Assisted Decision-Making</h3>
+        <section>
+            <h5>Researcher Information</h5>
+            <p><strong>Researcher:</strong> ZhaoBin Li<br> <strong>Department:</strong> Cognitive Sciences<br> <strong>Email:</strong>
+                <a href="mailto:zhaobin.li@uci.edu">zhaobin.li@uci.edu</a></p>
+        </section>
+    </div>
+    <section>
+        <h5>Study Overview</h5>
+        <p>Please read the information below and ask questions about anything that you do not understand. A
+            researcher listed above will be available to answer your questions.</p>
+        <p>You are being asked to participate in a research study. Participation in this study is voluntary. Please
+            use the Chrome browser to run the experiment.</p>
+        <p> We would like you to complete a survey to learn more about the way humans verify artificial
+            intelligence. The survey will last about 30 minutes. </p>
+        <p> There are no direct benefits from participation in the study. However, this study may help us to design
+            better AI agents. </p>
+        <p> This research is for residents of the United States over the age of 18; if you are not a resident of the
+            United States and/or under the age of 18, please do not complete this survey. </p>
+        <p> You will receive the amount stated in the Prolific study description. To get compensated,
+            you have to be redirected back to Prolific. </p>
+    </section>
+    <section>
+        <h5>Data Security & Future Research Use</h5>
+        <p> All research data collected will be stored securely and confidentially on password-protected online and
+            local storage. </p>
+        <p><strong>Future Research Use:</strong> Researchers will use your information to conduct this study. Once
+            the study is done using your information, we may share them with other researchers so they can use them
+            for other studies in the future. We will not share your name or any other private identifiable
+            information that would let the researchers know who you are. We will not ask you for additional
+            permission to share this de-identified information. </p>
+    </section>
+    <section>
+        <h5>Questions & Contact Information</h5>
+        <p> If you have any comments, concerns, or questions regarding this study, please contact the researchers
+            listed at the top of this form. </p>
+        <p> If you have questions or concerns about your rights as a research participant, you can contact the UCI
+            Institutional Review Board by: </p>
+        <ul>
+            <li>Phone: <a href="tel:9498248170">(949) 824-8170</a></li>
+            <li>Email: <a href="mailto:IRB@research.uci.edu">IRB@research.uci.edu</a></li>
+            <li>Mail: University of California, Irvine, Office of Research, Irvine, CA 92697-7600</li>
+        </ul>
+    </section>
+    <section>
+        <h5>What is an IRB?</h5>
+        <p> An Institutional Review Board (IRB) is a committee made up of scientists and non-scientists. The IRB’s
+            role is to protect the rights and welfare of human subjects involved in research. The IRB also assures
+            that the research complies with applicable regulations, laws, and institutional policies. </p>
+    </section>
+    <section>
+        <p> If you want to participate in this study, click the Agree button to start the survey. </p>
+    </section>
+    <div class="text-center vstack gap-3 align-items-center">
+        <div class="form-check">
+            <input class="form-check-input consentCheckbox" type="checkbox" id="consentCheckbox">
+            <label class="form-check-label" for="consentCheckbox"> Agree </label>
+        </div>
+        <button class="btn btn-primary startButton" disabled>Start</button>
+    </div>
+</div>
+
+<!--Experiment-->
+<div class="experiment container-fluid text-center p-3 d-none">
+    <nav class="progressDisplay row align-items-center mb-3">
+        <h5 class="trial col"></h5>
+        <h3 class="question col"> Species in Photo?</h3>
+        <h5 class="score col"></h5>
+    </nav>
+    <div class="mainDisplay row text-bg-warning p-3">
+        <div class="stimuliDisplay col-4 d-flex flex-column align-items-center justify-content-center">
+            <h3>Image Type: <span class="fs-1 catEmj"></span></h3>
+            <img class="imageDisplay img-fluid object-fit-contain" src="">
+        </div>
+        <div class="questionDisplay col-8 p-3">
+            <form class="aiForm card mb-3">
+                <h3 class="card-header">AI thinks the <span class="fs-1 catEmj"></span> is <span
+                        class="questionCat fst-italic"></span></h3>
+                <fieldset class="aiField card-body" disabled>
+                    <div class="questionCnf">
+                        <h3 class="promptCnf card-title">Confidence (%):</h3>
+                        <p class="text-body-secondary fs-5">0% = purely guessing; 100% = totally certain</p>
+                        <div class="btn-group buttonCnf" role="group">
+                            <input type="radio" class="btn-check" name="aiCnf" value="0" id="ai0" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai0">0</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="10" id="ai10" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai10">10</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="20" id="ai20" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai20">20</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="30" id="ai30" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai30">30</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="40" id="ai40" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai40">40</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="50" id="ai50" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai50">50</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="60" id="ai60" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai60">60</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="70" id="ai70" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai70">70</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="80" id="ai80" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai80">80</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="90" id="ai90" autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai90">90</label>
+                            <input type="radio" class="btn-check" name="aiCnf" value="100" id="ai100"
+                                   autocomplete="off">
+                            <label class="btn btn-outline-dark" for="ai100">100</label>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+            <form class="humanForm card">
+                <h3 class="card-header">Judge the AI</h3>
+                <fieldset class="humanField card-body" disabled>
+                    <div class="questionAns btn-group-lg hstack gap-3 justify-content-center" role="group">
+                        <input type="radio" class="btn-check" name="humanAns" value="no" id="humanNo"
+                               autocomplete="off" required>
+                        <label class="btn btn-outline-danger" for="humanNo">Wrong</label>
+
+                        <input type="radio" class="btn-check" name="humanAns" value="yes" id="humanYes"
+                               autocomplete="off">
+                        <label class="btn btn-outline-success" for="humanYes">Correct</label>
+                    </div>
+                    <button type="submit" class="btn btn-lg btn-secondary humanSubmit mt-3" disabled>Submit</button>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!--Complete-->
+<div class="complete container-fluid text-center w-50 d-none">
+    <div class="commentDisplay mx-auto">
+        <label for="commentField" class="form-label">Give your comments:</label>
+        <textarea class="form-control" id="commentField" rows="5"></textarea>
+        <button class="btn btn-primary commentSubmit mt-3">Submit</button>
+    </div>
+    <div class="redirectDisplay d-none">
+        <h3>Thank you for your participation!</h3>
+        <p>You will be redirected to Prolific.</p>
+        <p>If you are not redirected automatically, please click the button below.</p>
+        <button class="btn btn-primary redirectButton">Redirect to Prolific</button>
+    </div>
+</div>
+
+</body>
+</html>
