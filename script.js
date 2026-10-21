@@ -30,6 +30,9 @@ const dbPath = studyId + "/participantData/" + firebaseUserId + "/";
 const redirectURL = "https://app.prolific.com/submissions/complete?cc=C1P1YP97";
 const expData = {}; // experiment-wide data
 
+const allTrials = [] // all trials
+const errorTrials = [] // error trials
+
 // variables
 let trialData; // trial-level data
 let aiData;
@@ -46,7 +49,8 @@ let cat2Score = 0;
 let curTrialPer = 0;
 let curScorePer = 0;
 
-let submitting; // prevent double clicks
+let warnOnLeave = false;
+let submitting = false;
 
 let consentRemaining = 5;
 let dataReady = false;
@@ -89,6 +93,27 @@ const mainDisplay = document.querySelector(".mainDisplay");
 // helpers
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const timePassed = () => Math.round(performance.now());
+
+const writeRetry = async (path, data, tries = 3, timeoutMs = 10000) => {
+    for (let attempt = 1; attempt <= tries; attempt++) {
+        let timer;
+        try {
+            await Promise.race([
+                writeRealtimeDatabase(path, data),
+                new Promise((_, reject) => {
+                    timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+                }),
+            ]);
+            return true;
+        } catch (error) {
+            console.error(`Error writing to ${path} (attempt ${attempt}):`, error);
+            if (attempt < tries) await sleep(1000 * attempt);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+    return false;
+};
 
 function countdownNext(seconds = 2) {
     const btn = document.querySelector(".introjs-nextbutton");
@@ -209,8 +234,8 @@ const resetTrial = async () => {
 
         introJs()
             .setOptions({
-                exitOnEsc: debug,
-                exitOnOverlayClick: debug,
+                exitOnEsc: false,
+                exitOnOverlayClick: false,
                 showBullets: debug,
                 keyboardNavigation: debug,
                 steps,
@@ -221,30 +246,24 @@ const resetTrial = async () => {
 };
 
 // onboarding
-// consentCheckbox.onchange = () => {
-//     startButton.disabled = !consentCheckbox.checked;
-// };
-
-startButton.disabled = true;
-startButton.textContent = `Start (${consentRemaining}s)`;
-
-function updateStartButtonState() {
+function updateStartButton() {
     startButton.disabled = consentRemaining > 0 || !consentCheckbox.checked || !dataReady;
     startButton.textContent = consentRemaining > 0 ? `Start (${consentRemaining}s)`
         : dataReady ? "Start" : "Loading...";
 }
 
-updateStartButtonState();
-consentCheckbox.onchange = updateStartButtonState;
+updateStartButton();
+consentCheckbox.onchange = updateStartButton;
 
 const consentTimer = setInterval(() => {
     consentRemaining--;
     if (consentRemaining <= 0) clearInterval(consentTimer);
-    updateStartButtonState();
+    updateStartButton();
 }, 1000);
 
 
 startButton.onclick = async () => {
+    warnOnLeave = true;
     expData.startTime = Date.now();
 
     consent.classList.add("d-none");
@@ -342,8 +361,8 @@ startButton.onclick = async () => {
     ];
     intro
         .setOptions({
-            exitOnEsc: debug,
-            exitOnOverlayClick: debug,
+            exitOnEsc: false,
+            exitOnOverlayClick: false,
             showBullets: debug,
             keyboardNavigation: debug,
             steps,
@@ -374,11 +393,13 @@ humanForm.oninput = () => {
 
 
 humanForm.onsubmit = async (event) => {
+    event.preventDefault();
+
     if (submitting) return;
     submitting = true;
 
+    humanSubmit.disabled = true;
     trialData.humanTime = timePassed();
-    event.preventDefault();
 
     let humanAns = document.querySelector('input[name="humanAns"]:checked').value;
     trialData.humanAns = humanAns;
@@ -414,12 +435,24 @@ humanForm.onsubmit = async (event) => {
     if (debug) {
         console.log(trialData);
     }
-    await writeRealtimeDatabase(dbPath + "/trial/" + curTrial, trialData);
+
+    allTrials.push(trialData);
+
+    humanSubmit.textContent = "Saving...";
+    humanField.disabled = true;
+
+    const ok = await writeRetry(dbPath + "/trial/" + curTrial, trialData);
+    humanSubmit.textContent = "Submit";
+
+    if (!ok) {
+        errorTrials.push(curTrial);
+        console.error("Failed to write trial data");
+    }
 
     introJs()
         .setOptions({
-            exitOnEsc: debug,
-            exitOnOverlayClick: debug,
+            exitOnEsc: false,
+            exitOnOverlayClick: false,
             showBullets: debug,
             keyboardNavigation: debug,
             steps: [
@@ -438,13 +471,15 @@ humanForm.onsubmit = async (event) => {
             if (curTrial <= numTrial) {
                 resetTrial();
             } else {
+                experiment.classList.add("d-none");
+                complete.classList.remove("d-none");
+
+                await writeRetry(dbPath + "/trialBackup", allTrials);
+
                 expData.score = curScore;
 
                 expData.cat1Score = cat1Score;
                 expData.cat2Score = cat2Score;
-
-                experiment.classList.add("d-none");
-                complete.classList.remove("d-none");
             }
         })
         .onafterchange(() => countdownNext())
@@ -458,10 +493,16 @@ commentSubmit.onclick = async () => {
     expData.comment = commentField.value;
     expData.endTime = Date.now();
 
-    await writeRealtimeDatabase(dbPath + "/exp", expData);
-    console.log("Wrote to database");
+    expData.errorTrials = errorTrials;
+    await writeRetry(dbPath + "/exp", expData);
 
-    await finalizeBlockRandomization(studyId, "nat");
+    try {
+        await finalizeBlockRandomization(studyId, "nat");
+    } catch (error) {
+        console.error(error);
+    }
+
+    warnOnLeave = false;
 
     commentDisplay.classList.add("d-none");
     redirectDisplay.classList.remove("d-none");
@@ -502,8 +543,10 @@ const blockIcon = plant1st ? ["Plants 🌱", "Fungi 🍄", "Plants 🌱", "Fungi
 // blocked or interleaved
 const blocked = Boolean(expData.condition & 4);
 
-let data1 = await getData(data1Path);
-let data2 = await getData(data2Path);
+let [data1, data2] = await Promise.all([
+    getData(data1Path),
+    getData(data2Path),
+]);
 
 data1 = _.sampleSize(data1, blockSize * 2);
 data2 = _.sampleSize(data2, blockSize * 2);
@@ -520,11 +563,23 @@ if (blocked) {
     aiData = data1.flatMap((ele, idx) => [ele, data2[idx]]);
 }
 
-Object.assign(expData, {overPlant, plant1st, blocked})
-await writeRealtimeDatabase(dbPath + "/exp", expData);
+if (aiData.length === numTrial) {
+    dataReady = true;
+    updateStartButton();
+} else {
+    startButton.textContent = "Error loading data — please refresh";
+}
 
-dataReady = true;
-updateStartButtonState()
+Object.assign(expData, {overPlant, plant1st, blocked})
+await writeRetry(dbPath + "/exp", expData);
+
+
+window.addEventListener("beforeunload", (event) => {
+    if (warnOnLeave) {
+        event.preventDefault();
+        event.returnValue = ""; // compatibility
+    }
+});
 
 if (debug) {
     console.log(expData);
@@ -534,5 +589,7 @@ if (debug) {
 
     console.log(aiData);
 }
+
+
 
 
