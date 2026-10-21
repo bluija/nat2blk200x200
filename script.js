@@ -15,7 +15,7 @@ data saved as FirebaseID /
 3. trial: trial data
 */
 
-const debug = true;
+const debug = false;
 
 // constants
 const cat1Clr = "warning";
@@ -45,6 +45,11 @@ let cat2Score = 0;
 
 let curTrialPer = 0;
 let curScorePer = 0;
+
+let submitting; // prevent double clicks
+
+let consentRemaining = 5;
+let dataReady = false;
 
 // consent
 const consent = document.querySelector(".consent");
@@ -156,6 +161,7 @@ const resetTrial = async () => {
     humanForm.reset();
 
     humanField.disabled = true;
+    submitting = false
 
     if (trialData.cat === "Plants") {
         catEmj.forEach((emj) => (emj.textContent = "🌱"));
@@ -167,14 +173,16 @@ const resetTrial = async () => {
         mainDisplay.classList.replace(`text-bg-${cat1Clr}`, `text-bg-${cat2Clr}`);
     }
 
-    questionCat.textContent = "Thinking...";
+    questionCat.textContent = "(Thinking...)";
     imageDisplay.src = trialData.path;
 
     await sleep(2000);
+
     questionCat.textContent = trialData.aiAns;
     document.getElementById(`ai${trialData.aiCnf}`).checked = true;
 
     humanField.disabled = false;
+    humanSubmit.disabled = true;
 
     if ((curTrial - 1) % blockSize === 0) {
         const blockEmj = blockIcon[(curTrial - 1) / blockSize];
@@ -213,11 +221,31 @@ const resetTrial = async () => {
 };
 
 // onboarding
-startButton.disabled = !consentCheckbox.checked;
+// consentCheckbox.onchange = () => {
+//     startButton.disabled = !consentCheckbox.checked;
+// };
+
+startButton.disabled = true;
+startButton.textContent = `Start (${consentRemaining}s)`;
+
+function updateStartButtonState() {
+    startButton.disabled = consentRemaining > 0 || !consentCheckbox.checked || !dataReady;
+    startButton.textContent = consentRemaining > 0 ? `Start (${consentRemaining}s)`
+        : dataReady ? "Start" : "Loading...";
+}
+
+updateStartButtonState();
+consentCheckbox.onchange = updateStartButtonState;
+
+const consentTimer = setInterval(() => {
+    consentRemaining--;
+    if (consentRemaining <= 0) clearInterval(consentTimer);
+    updateStartButtonState();
+}, 1000);
+
 
 startButton.onclick = async () => {
     expData.startTime = Date.now();
-    await writeRealtimeDatabase(dbPath + "/exp", expData);
 
     consent.classList.add("d-none");
     experiment.classList.remove("d-none");
@@ -344,7 +372,11 @@ humanForm.oninput = () => {
     }
 };
 
+
 humanForm.onsubmit = async (event) => {
+    if (submitting) return;
+    submitting = true;
+
     trialData.humanTime = timePassed();
     event.preventDefault();
 
@@ -420,6 +452,9 @@ humanForm.onsubmit = async (event) => {
 };
 
 commentSubmit.onclick = async () => {
+    commentSubmit.disabled = true;
+    commentField.disabled = true;
+
     expData.comment = commentField.value;
     expData.endTime = Date.now();
 
@@ -448,7 +483,6 @@ score.textContent = `Score: 0/0 (0%)`;
 const condition = await blockRandomization(studyId, "nat", 8, 200, 1); // 0-based
 expData.condition = condition[0];
 
-
 // checking boolean values on 2x2x2
 // overconfidence on Plants and underconfidence on Fungi
 const overPlant = Boolean(expData.condition & 1);
@@ -468,8 +502,6 @@ const blockIcon = plant1st ? ["Plants 🌱", "Fungi 🍄", "Plants 🌱", "Fungi
 // blocked or interleaved
 const blocked = Boolean(expData.condition & 4);
 
-Object.assign(expData, {overPlant, plant1st, blocked})
-
 let data1 = await getData(data1Path);
 let data2 = await getData(data2Path);
 
@@ -488,10 +520,11 @@ if (blocked) {
     aiData = data1.flatMap((ele, idx) => [ele, data2[idx]]);
 }
 
-// ready
-consentCheckbox.onchange = () => {
-    startButton.disabled = !consentCheckbox.checked;
-};
+Object.assign(expData, {overPlant, plant1st, blocked})
+await writeRealtimeDatabase(dbPath + "/exp", expData);
+
+dataReady = true;
+updateStartButtonState()
 
 if (debug) {
     console.log(expData);
