@@ -30,8 +30,8 @@ const dbPath = studyId + "/participantData/" + firebaseUserId + "/";
 const redirectURL = "https://app.prolific.com/submissions/complete?cc=C1P1YP97";
 const expData = {}; // experiment-wide data
 
-const allTrials = [] // all trials
-const errorTrials = [] // error trials
+const allTrialData = [] // all trial data as backup
+const errorTrialIdx = [] // error trial numbers
 
 // variables
 let trialData; // trial-level data
@@ -436,7 +436,7 @@ humanForm.onsubmit = async (event) => {
         console.log(trialData);
     }
 
-    allTrials.push(trialData);
+    allTrialData.push(trialData);
 
     humanSubmit.textContent = "Saving...";
     humanField.disabled = true;
@@ -445,7 +445,7 @@ humanForm.onsubmit = async (event) => {
     humanSubmit.textContent = "Submit";
 
     if (!ok) {
-        errorTrials.push(curTrial);
+        errorTrialIdx.push(curTrial);
         console.error("Failed to write trial data");
     }
 
@@ -474,7 +474,7 @@ humanForm.onsubmit = async (event) => {
                 experiment.classList.add("d-none");
                 complete.classList.remove("d-none");
 
-                await writeRetry(dbPath + "/trialBackup", allTrials);
+                await writeRetry(dbPath + "/trialBackup", allTrialData);
 
                 expData.score = curScore;
 
@@ -493,7 +493,7 @@ commentSubmit.onclick = async () => {
     expData.comment = commentField.value;
     expData.endTime = Date.now();
 
-    expData.errorTrials = errorTrials;
+    expData.errorTrialIdx = errorTrialIdx;
     await writeRetry(dbPath + "/exp", expData);
 
     try {
