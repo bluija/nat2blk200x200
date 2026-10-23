@@ -24,7 +24,7 @@ const cat2Clr = "info";
 const numTrial = 200;
 const blockSize = Math.round(numTrial / 4);
 
-const studyId = "nat2blk200x200";
+const studyId = "nat2blk200x200v2";
 const dbPath = studyId + "/participantData/" + firebaseUserId + "/";
 
 const redirectURL = "https://app.prolific.com/submissions/complete?cc=C1P1YP97";
